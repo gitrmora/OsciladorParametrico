@@ -1,0 +1,2 @@
+# OsciladorParametrico
+## Proyecto de computacional
