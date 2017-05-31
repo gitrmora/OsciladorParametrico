@@ -228,8 +228,9 @@ module ADT
 
         h1 = 0.5 * (epsi / abs(a.coef[p - 0]))^(1 / (p - 0)) ## Multiplicar por 0.5 nos garantiza que es menor que la cota
         h2 = 0.5 * (epsi / abs(a.coef[p - 1]))^(1 / (p - 1)) ## Multiplicar por 0.5 nos garantiza que es menor que la cota
-
-        h = min(h1, h2)
+        h3 = 0.5 * (epsi / abs(a.coef[p - 2]))^(1 / (p - 2)) ## Multiplicar por 0.5 nos garantiza que es menor que la cota
+        
+        h = min(h1, h2, h3)
 
         return h
     end
@@ -262,16 +263,14 @@ module ADT
         return X̄
     end
 
-    function integradorT2(f::Function, t0::Real, tf::Real, x̄0::Array, epsi::Real = 1e-40)
-
-        max = 100000 ## Iteraciones maximas del while
+    function integradorT2(f::Function, t0::Real, tf::Real, x̄0::Array, max = 100000, epsi::Real = 1e-40)
 
         tiempos = [t0]
         X̄ = [x̄0]
+        
+        n = 1 ## Contador
 
-        n = 0 ## Contador
-
-        while t0 < tf && n < max  ## el isnan() nos ayuda a parar la integracion al pasar por nu punto singular
+        while t0 <= tf && n <= max
 
             sol = coeficient2(t0, X̄[end], f)
 
@@ -284,18 +283,19 @@ module ADT
 
             x0 = horner_evaluation(sol[1], h)
             y0 = horner_evaluation(sol[2], h)
-
-
-            if any(isnan([x0, y0]))
-                break
-            end
-
+        
+            
             push!(tiempos, t0)
             push!(X̄, [x0, y0])
-
             n += 1
 
+
         end
+        l = length(tiempos)
+        k = length(X̄)
+    
+        println("Integracion terminada")
+        println("#T = $l, #X̄ = $k, n = $n / $max")
 
         return tiempos, X̄
     end
