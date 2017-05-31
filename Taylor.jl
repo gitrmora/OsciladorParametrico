@@ -12,7 +12,7 @@ __precompile__(true)
 module ADT
 
     import Base: +, -, *, /, ^, ==
-    export Taylor, gradomax, prom, evaluacion
+    export Taylor, gradomax, prom, evaluacion, integradorT2
 
     """
     Definición de polinomios de Taylor, donde coef es el arreglo que contiene al polinomio de taylor
@@ -215,5 +215,88 @@ module ADT
     end
 
     cos(a::Taylor, n::Integer) = cos(prom(a, n))
+    
 
+    ## Integracion
+
+    function adaptive_step(a::Taylor, epsi::Real = 1e-40)
+        p = gradomax(a)
+
+        while a.coef[p] == 0 ## Se encarga de terminos nulos.
+            p -= 1
+        end
+
+        h1 = 0.5 * (epsi / abs(a.coef[p - 0]))^(1 / (p - 0)) ## Multiplicar por 0.5 nos garantiza que es menor que la cota
+        h2 = 0.5 * (epsi / abs(a.coef[p - 1]))^(1 / (p - 1)) ## Multiplicar por 0.5 nos garantiza que es menor que la cota
+
+        h = min(h1, h2)
+
+        return h
+    end
+
+    function horner_evaluation(a::Taylor, x0::Number)
+        n = gradomax(a)
+        y = a.coef[n]
+
+        for i = 1:(n - 1)
+            y = a.coef[n - i] + y * x0
+        end
+
+        return y
+    end
+
+    function coeficient2(t::Real, x̄0::Array, f::Function, n = 30)
+        ## n fue escogido de manera arbitraria, 30 parece un buen numero
+
+        X̄ = [prom(Taylor([x̄0[1]]), n), prom(Taylor([x̄0[2]]), n)]
+        ##T = prom(Taylor(t), n)
+
+        for k = 1:(n - 1) ## usar n - 1 nos deja con un polinomio de grado n ya que se utiliza el valor de x0
+            g = f(t, X̄) ## f entrega un vector de 2 entradas
+
+            X̄[1].coef[k + 1] = g[1].coef[k] / k
+            X̄[2].coef[k + 1] = g[2].coef[k] / k
+
+        end
+
+        return X̄
+    end
+
+    function integradorT2(f::Function, t0::Real, tf::Real, x̄0::Array, epsi::Real = 1e-40)
+
+        max = 100000 ## Iteraciones maximas del while
+
+        tiempos = [t0]
+        X̄ = [x̄0]
+
+        n = 0 ## Contador
+
+        while t0 < tf && n < max  ## el isnan() nos ayuda a parar la integracion al pasar por nu punto singular
+
+            sol = coeficient2(t0, X̄[end], f)
+
+            hx = adaptive_step(sol[1], epsi)
+            hy = adaptive_step(sol[2], epsi)
+
+            h = min(hx, hy)
+
+            t0 += h
+
+            x0 = horner_evaluation(sol[1], h)
+            y0 = horner_evaluation(sol[2], h)
+
+
+            if any(isnan([x0, y0]))
+                break
+            end
+
+            push!(tiempos, t0)
+            push!(X̄, [x0, y0])
+
+            n += 1
+
+        end
+
+        return tiempos, X̄
+    end
 end
